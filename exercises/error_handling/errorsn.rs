@@ -15,23 +15,57 @@
 //
 // Execute `rustlings hint errorsn` for hints :)
 
-// I AM NOT DONE
 
-use std::error;
-use std::fmt;
-use std::io;
+use std::{num, error, fmt, io};
+
+#[derive(Debug)]
+enum MyError {
+    ValidationError(CreationError),
+    IoError(io::Error),
+    ParseError(num::ParseIntError),
+}
+
+impl From<io::Error> for MyError {
+    fn from(e: io::Error) -> Self {
+        MyError::IoError(e)
+    }
+}
+
+impl From<num::ParseIntError> for MyError {
+    fn from(e: num::ParseIntError) -> Self {
+        MyError::ParseError(e)
+    }
+}
+
+impl From<CreationError> for MyError {
+    fn from(e: CreationError) -> Self {
+        MyError::ValidationError(e)
+    }
+}
+
+impl error::Error for MyError {}
+
+impl fmt::Display for MyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MyError::IoError(e) => f.write_str(&e.to_string()), // as doc of write_str() says it is same as write(f, "{}", e) as below
+            MyError::ParseError(e) => write!(f, "{}", e),
+            MyError::ValidationError(e) => write!(f, "{}", e), 
+        }
+    }
+}
 
 // PositiveNonzeroInteger is a struct defined below the tests.
-fn read_and_validate(b: &mut dyn io::BufRead) -> Result<PositiveNonzeroInteger, ???> {
+fn read_and_validate(b: &mut dyn io::BufRead) -> Result<PositiveNonzeroInteger, MyError> {
     let mut line = String::new();
-    b.read_line(&mut line);
-    let num: i64 = line.trim().parse();
-    let answer = PositiveNonzeroInteger::new(num);
-    answer
+    b.read_line(&mut line)?;
+    let num: i64 = line.trim().parse()?;
+    let answer = PositiveNonzeroInteger::new(num)?;
+    Ok(answer)
 }
 
 // This is a test helper function that turns a &str into a BufReader.
-fn test_with_str(s: &str) -> Result<PositiveNonzeroInteger, Box<dyn error::Error>> {
+fn test_with_str(s: &str) -> Result<PositiveNonzeroInteger, MyError> {
     let mut b = io::BufReader::new(s.as_bytes());
     read_and_validate(&mut b)
 }
@@ -100,7 +134,7 @@ enum CreationError {
 
 impl fmt::Display for CreationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str((self as &dyn error::Error).description())
+        f.write_str(&(self as &dyn error::Error).to_string())
     }
 }
 
